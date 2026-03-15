@@ -117,9 +117,9 @@ Or grab from `build_archive/` if already built.
 
 Built via PlatformIO in esp32-supermini-projects:
 ```bash
-cd esp32-supermini-projects/projects/hdzero-headtracker-monitor
-pio run -e esp32c3
-# Output: .pio/build/esp32c3/firmware.bin
+cd esp32-supermini-projects/projects/waybeam-connect
+pio run -e esp32c3_supermini
+# Output: .pio/build/esp32c3_supermini/firmware.bin
 ```
 
 ## Asset naming convention
@@ -129,11 +129,9 @@ waybeam-hub-vehicle-arm.tar.gz
 waybeam-hub-ground-aarch64.tar.gz
 venc-star6e-arm.tar.gz
 venc-maruko-arm.tar.gz
-ip2uart-aarch64
 waybeam-pwm-arm
-waybeam-osd-arm.tar.gz
 waybeam-android-vX.Y.Z.apk
-hdzero-headtracker-esp32c3.bin
+waybeam-connect-esp32c3.bin
 firmware-ssc338q-eu.tgz
 firmware-ssc338q-au.tgz
 firmware-ssc30kq-eu.tgz

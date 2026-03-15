@@ -130,26 +130,9 @@ if [ -d "$BR_TARGET" ]; then
         collected=$((collected + 1))
     fi
 
-    # ip2uart
-    if [ -f "${BR_TARGET}/usr/bin/ip2uart" ]; then
-        cp "${BR_TARGET}/usr/bin/ip2uart" "${STAGING}/ip2uart"
-        echo "  -> ip2uart"
-        collected=$((collected + 1))
-    fi
-
-    # waybeam_osd + osd_send
-    for bin in waybeam_osd osd_send; do
-        if [ -f "${BR_TARGET}/usr/bin/${bin}" ]; then
-            cp "${BR_TARGET}/usr/bin/${bin}" "${STAGING}/${bin}"
-            echo "  -> ${bin}"
-            collected=$((collected + 1))
-        fi
-    done
-
     # Config files
     for f in "${BR_TARGET}/etc/waybeam_hub/waybeam_vehicle.conf" \
-             "${BR_TARGET}/etc/venc.json" \
-             "${BR_TARGET}/etc/waybeam_osd.json"; do
+             "${BR_TARGET}/etc/venc.json"; do
         if [ -f "$f" ]; then
             cp "$f" "${STAGING}/$(basename "$f")"
             echo "  -> $(basename "$f")"
@@ -186,7 +169,7 @@ if [ -d "$BR_TARGET" ]; then
     # Create vehicle bundle tarball
     echo "[vehicle] Creating waybeam-hub-vehicle-arm.tar.gz"
     VEHICLE_FILES=""
-    for f in waybeam_hub json_cli waybeam_vehicle.conf waybeam_osd.json \
+    for f in waybeam_hub json_cli waybeam_vehicle.conf venc.json \
              waybeam_vehicle.html S97waybeam-hub; do
         [ -f "${STAGING}/${f}" ] && VEHICLE_FILES="${VEHICLE_FILES} ${f}"
     done
@@ -230,11 +213,11 @@ fi
 
 # --- ESP32 firmware ---
 if [ -n "$ESP32_DIR" ]; then
-    HT_BIN="${ESP32_DIR}/projects/hdzero-headtracker-monitor/.pio/build/esp32c3/firmware.bin"
+    HT_BIN="${ESP32_DIR}/projects/waybeam-connect/.pio/build/esp32c3_supermini/firmware.bin"
     if [ -f "$HT_BIN" ]; then
-        echo "[esp32] Collecting headtracker firmware"
-        cp "$HT_BIN" "${STAGING}/hdzero-headtracker-esp32c3.bin"
-        echo "  -> hdzero-headtracker-esp32c3.bin"
+        echo "[esp32] Collecting waybeam-connect firmware"
+        cp "$HT_BIN" "${STAGING}/waybeam-connect-esp32c3.bin"
+        echo "  -> waybeam-connect-esp32c3.bin"
         collected=$((collected + 1))
     else
         echo "[esp32] No PlatformIO build output found, skipping"

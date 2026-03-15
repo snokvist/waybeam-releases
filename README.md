@@ -14,11 +14,8 @@ Download the latest release from the
 |---|---|---|
 | `waybeam_hub` | [waybeam-hub](https://github.com/snokvist/waybeam-hub) | Modular C daemon: OSD, menu, WebUI, telemetry, PWM, sync |
 | `json_cli` | [waybeam-hub](https://github.com/snokvist/waybeam-hub) | JSON config query/edit tool |
-| `venc` | [venc_star6e](https://github.com/OpenIPC/waybeam_venc) | H.265 video encoder/streamer (star6e and maruko builds) |
+| `venc` | [waybeam_venc](https://github.com/OpenIPC/waybeam_venc) | H.265 video encoder/streamer (star6e and maruko builds) |
 | `waybeam-pwm` | [infinity6e-pwm](https://github.com/snokvist/infinity6e-pwm) | CRSF-to-servo PWM bridge |
-| `ip2uart` | [ip2uart](https://github.com/snokvist/ip2uart) | UART-to-UDP bridge (CRSF/MSP/MAVLink) |
-| `waybeam_osd` | [waybeam_osd](https://github.com/snokvist/waybeam_osd) | LVGL transparent OSD overlay |
-| `osd_send` | [waybeam_osd](https://github.com/snokvist/waybeam_osd) | OSD metrics sender utility |
 
 ### Ground station binaries (Rockchip RK3566 — aarch64)
 
@@ -36,7 +33,7 @@ Download the latest release from the
 
 | Artifact | Source repo | Description |
 |---|---|---|
-| `hdzero-headtracker.bin` | [esp32-supermini-projects](https://github.com/snokvist/esp32-supermini-projects) | HDZero PPM-to-CRSF bridge + BLE gamepad + servo PWM |
+| `waybeam-connect.bin` | [esp32-supermini-projects](https://github.com/snokvist/esp32-supermini-projects) | PPM-to-CRSF bridge + BLE gamepad + servo PWM + web config |
 
 ### Full firmware images (from OpenIPC builder)
 
@@ -58,7 +55,7 @@ WiFi region variants:
 
 Each release also includes:
 - `waybeam_vehicle.conf` — default vehicle configuration
-- `waybeam_osd.json` — OSD layout configuration
+- `venc.json` — video encoder configuration
 - `waybeam_vehicle.html` — WebUI page
 - `S97waybeam-hub` — init script for waybeam-hub
 - `S95venc` — init script for venc
@@ -75,7 +72,7 @@ waybeam-hub-ground-aarch64.tar.gz     # Ground hub (integrated pixelpilot)
 venc-star6e-arm.tar.gz                # Video encoder (star6e)
 venc-maruko-arm.tar.gz                # Video encoder (maruko)
 waybeam-android-vX.Y.Z.apk           # Android app
-hdzero-headtracker-esp32c3.bin        # ESP32 firmware
+waybeam-connect-esp32c3.bin           # ESP32 firmware
 firmware-ssc338q-eu.tgz              # Full firmware image
 ```
 

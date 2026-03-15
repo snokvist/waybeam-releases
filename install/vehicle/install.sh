@@ -42,13 +42,10 @@ deploy "${STAGING}/waybeam_hub"   "/usr/bin/waybeam_hub"
 deploy "${STAGING}/json_cli"     "/usr/bin/json_cli"
 deploy "${STAGING}/venc-star6e"  "/usr/bin/venc"
 deploy "${STAGING}/waybeam-pwm"  "/usr/bin/waybeam-pwm"
-deploy "${STAGING}/ip2uart"      "/usr/bin/ip2uart"
-deploy "${STAGING}/waybeam_osd"  "/usr/bin/waybeam_osd"
-deploy "${STAGING}/osd_send"     "/usr/bin/osd_send"
 
 # Config (don't overwrite existing by default)
 echo "[configs]"
-for conf in waybeam_vehicle.conf venc.json waybeam_osd.json; do
+for conf in waybeam_vehicle.conf venc.json; do
     if [ -f "${STAGING}/${conf}" ]; then
         # Check if config already exists on target
         if ssh "${SSH_USER}@${VEHICLE_IP}" "test -f /etc/${conf}" 2>/dev/null; then
