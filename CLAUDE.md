@@ -8,7 +8,7 @@ and GitHub Releases with binary assets.
 
 Single download point for all Waybeam binaries across platforms:
 - Vehicle firmware + binaries (SigmaStar ARM, built via OpenIPC builder)
-- Ground station binary (RK3566 aarch64, built via GitHub Actions CI)
+- Ground station binaries (aarch64 + x86_64, built locally or via CI)
 - Android APK (built via Gradle)
 - ESP32 firmware (built via PlatformIO)
 
@@ -42,8 +42,8 @@ Run `scripts/collect.sh` to gather all built artifacts into `staging/`:
 Sources:
 - **Builder archive**: `../builder/archive/<device>/<timestamp>/` — firmware images
 - **Builder output**: OpenIPC buildroot `output/target/usr/bin/` — individual binaries
+- **Ground builds**: Local cross-compile using sbc-groundstations toolchain (preferred), or CI zip fallback
 - **Android build_archive**: `../Waybeam-android/build_archive/` — APKs
-- **waybeam-hub CI**: GitHub Actions artifact from waybeam-hub repo — ground binary
 - **ESP32**: PlatformIO `.pio/build/` output — firmware .bin files
 
 The collect script stages everything into `staging/` with the correct
@@ -89,12 +89,90 @@ cd builder && ./builder.sh
 # Select: ssc338q_waybeam_eu (or other variant)
 ```
 
-### Ground station binary (aarch64, built via GitHub Actions)
+### Ground station binaries (local build — preferred)
 
-The ground waybeam_hub build requires GStreamer, libdrm, Rockchip MPP,
-and libudev. It is built by GitHub Actions CI in the waybeam-hub repo.
+Ground builds require platform-specific libraries (GStreamer, libdrm, etc.)
+and are best built locally using existing toolchains. CI is a fallback but
+depends on GitHub Actions billing being active.
 
-Fetch the latest CI artifact:
+**Prerequisites**: All sub-repos must be up to date locally before building.
+The waybeam-hub source at `../waybeam-hub/` is used directly by `make ground`.
+
+#### aarch64 (RK3566 — integrated pixelpilot with re-encode + DVR)
+
+Uses the sbc-groundstations Buildroot cross-toolchain. Requires a prior
+`sbc-groundstations` build to have the toolchain and sysroot populated.
+
+```bash
+cd waybeam-hub
+
+SBC=../sbc-groundstations/output/waybeam_radxa3e_defconfig
+
+# Cross-compile with Buildroot sysroot
+PKG_CONFIG_SYSROOT_DIR="$SBC/staging" \
+PKG_CONFIG_PATH="$SBC/staging/usr/lib/pkgconfig" \
+PKG_CONFIG_LIBDIR="$SBC/staging/usr/lib/pkgconfig" \
+make ground \
+  CC="$SBC/host/bin/aarch64-none-linux-gnu-gcc --sysroot=$SBC/staging" \
+  PKG_CONFIG="$SBC/host/bin/pkg-config"
+
+# Strip for release
+$SBC/host/bin/aarch64-none-linux-gnu-strip build/ground/waybeam_hub
+
+# Package with config and WebUI
+mkdir -p /tmp/waybeam-hub-ground-aarch64
+cp build/ground/waybeam_hub /tmp/waybeam-hub-ground-aarch64/
+cp configs/waybeam_ground.conf /tmp/waybeam-hub-ground-aarch64/
+cp web/waybeam_hub_c.html /tmp/waybeam-hub-ground-aarch64/
+tar czf staging/waybeam-hub-ground-aarch64.tar.gz -C /tmp waybeam-hub-ground-aarch64/
+```
+
+Build features enabled: `HUB_PIXELPILOT_INTEGRATED`, `HUB_DVR_COLORCORRECT`
+(EGL/GLES/GBM/librga from sbc-groundstations sysroot).
+
+Dependencies provided by sbc-groundstations Buildroot sysroot:
+- `gstreamer-1.0`, `gst-plugins-base` — media pipeline
+- `libdrm` — KMS/DRM display output
+- `rockchip-mpp` — hardware video decode (Rockchip MPP)
+- `libudev` — device hotplug
+- `libpng` — image loading
+- `librga` — Rockchip 2D accelerator (color correction)
+- `EGL`, `GLESv2`, `GBM` — GPU re-encode path
+
+#### x86_64 (GStreamer/VAAPI — development/testing)
+
+Builds natively on the host. Requires GStreamer, cairo, and glib dev packages.
+
+```bash
+cd waybeam-hub
+
+# Install deps (Ubuntu/Debian)
+sudo apt-get install -y build-essential pkg-config \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+  libglib2.0-dev libcairo2-dev
+
+make ground_x86
+
+# Strip for release
+strip build/ground_x86/waybeam_hub
+
+# Package
+mkdir -p /tmp/waybeam-hub-ground-x86_64
+cp build/ground_x86/waybeam_hub /tmp/waybeam-hub-ground-x86_64/
+cp configs/waybeam_ground.conf /tmp/waybeam-hub-ground-x86_64/
+cp web/waybeam_hub_c.html /tmp/waybeam-hub-ground-x86_64/
+tar czf staging/waybeam-hub-ground-x86_64.tar.gz -C /tmp waybeam-hub-ground-x86_64/
+```
+
+The x86 build uses `mod_video_player` (GStreamer/VAAPI) instead of
+`mod_pixelpilot` (Rockchip MPP). No hardware decode acceleration unless
+VAAPI is available.
+
+#### CI fallback (aarch64 only)
+
+If local cross-compile is not available, the waybeam-hub CI builds aarch64
+on `ubuntu-24.04-arm` runners. Requires GitHub Actions billing to be active.
+
 ```bash
 # Use GitHub API to download (not gh run download — has known bugs)
 gh api repos/snokvist/waybeam-hub/actions/artifacts \
@@ -127,6 +205,7 @@ pio run -e esp32c3_supermini
 ```
 waybeam-hub-vehicle-arm.tar.gz
 waybeam-hub-ground-aarch64.tar.gz
+waybeam-hub-ground-x86_64.tar.gz
 venc-star6e-arm.tar.gz
 venc-maruko-arm.tar.gz
 waybeam-pwm-arm
@@ -148,9 +227,10 @@ This repo is referenced from
 
 The release workflow is:
 1. Develop and test in individual sub-repos
-2. Build via builder (vehicle) or CI (ground/android)
-3. Collect and upload here
-4. Users download from this repo's Releases page
+2. Ensure all sub-repos are up to date locally (`git submodule update --remote`)
+3. Build: vehicle via builder, ground via local cross-compile, android via Gradle
+4. Collect and upload here
+5. Users download from this repo's Releases page
 
 ## Target devices
 
