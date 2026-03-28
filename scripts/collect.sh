@@ -11,7 +11,9 @@
 #   --esp32-dir DIR          Path to esp32-supermini-projects (default: auto-detect)
 #   --device DEVICE          Builder device name (default: ssc338q_waybeam_eu)
 #   --version VERSION        Version string for naming (default: dev)
-#   --ground-zip FILE        Path to ground build zip (from CI)
+#   --ground-zip FILE        Path to ground build zip (from CI, fallback)
+#   --hub-dir DIR            Path to waybeam-hub (default: auto-detect)
+#   --sbc-dir DIR            Path to sbc-groundstations (default: auto-detect)
 #   --clean                  Remove staging/ before collecting
 
 set -euo pipefail
@@ -25,6 +27,8 @@ BUILDER_DIR="${REPO_DIR}/../builder"
 COORDINATION_DIR="${REPO_DIR}/../waybeam-coordination"
 ANDROID_DIR=""
 ESP32_DIR=""
+HUB_DIR=""
+SBC_DIR=""
 DEVICE="ssc338q_waybeam_eu"
 VERSION="dev"
 GROUND_ZIP=""
@@ -36,6 +40,8 @@ while [[ $# -gt 0 ]]; do
         --coordination-dir) COORDINATION_DIR="$2"; shift 2 ;;
         --android-dir)    ANDROID_DIR="$2"; shift 2 ;;
         --esp32-dir)      ESP32_DIR="$2"; shift 2 ;;
+        --hub-dir)        HUB_DIR="$2"; shift 2 ;;
+        --sbc-dir)        SBC_DIR="$2"; shift 2 ;;
         --device)         DEVICE="$2"; shift 2 ;;
         --version)        VERSION="$2"; shift 2 ;;
         --ground-zip)     GROUND_ZIP="$2"; shift 2 ;;
@@ -62,10 +68,22 @@ if [ -z "$ESP32_DIR" ]; then
         [ -d "$d" ] && ESP32_DIR="$d" && break
     done
 fi
+if [ -z "$HUB_DIR" ]; then
+    for d in "${COORDINATION_DIR}/waybeam-hub" "${REPO_DIR}/../waybeam-hub"; do
+        [ -d "$d" ] && HUB_DIR="$d" && break
+    done
+fi
+if [ -z "$SBC_DIR" ]; then
+    for d in "${COORDINATION_DIR}/sbc-groundstations" "${REPO_DIR}/../sbc-groundstations"; do
+        [ -d "$d" ] && SBC_DIR="$d" && break
+    done
+fi
 
 echo "=== Waybeam Release Collector ==="
 echo "Builder:      ${BUILDER_DIR}"
 echo "Coordination: ${COORDINATION_DIR}"
+echo "Hub:          ${HUB_DIR:-not found}"
+echo "SBC Ground:   ${SBC_DIR:-not found}"
 echo "Android:      ${ANDROID_DIR:-not found}"
 echo "ESP32:        ${ESP32_DIR:-not found}"
 echo "Device:       ${DEVICE}"
@@ -181,21 +199,106 @@ else
     echo "[vehicle] No buildroot output found, skipping individual binaries"
 fi
 
-# --- Ground station binary (from CI zip) ---
-if [ -n "$GROUND_ZIP" ] && [ -f "$GROUND_ZIP" ]; then
-    echo "[ground] Extracting from ${GROUND_ZIP}"
+# --- Ground station binaries (local build preferred, CI zip fallback) ---
+#
+# Local build uses the sbc-groundstations Buildroot toolchain for aarch64
+# and native gcc for x86_64. Requires up-to-date waybeam-hub source.
+#
+SBC_SYSROOT=""
+if [ -n "$SBC_DIR" ]; then
+    # Find the Buildroot output directory (try common defconfigs)
+    for defconfig in waybeam_radxa3e_defconfig; do
+        candidate="${SBC_DIR}/output/${defconfig}"
+        if [ -d "$candidate/host/bin" ] && [ -d "$candidate/staging/usr/lib/pkgconfig" ]; then
+            SBC_SYSROOT="$candidate"
+            break
+        fi
+    done
+fi
+
+GROUND_BUILT=false
+
+# aarch64 ground: local cross-compile
+if [ -n "$HUB_DIR" ] && [ -n "$SBC_SYSROOT" ]; then
+    CROSS_CC="${SBC_SYSROOT}/host/bin/aarch64-none-linux-gnu-gcc"
+    CROSS_STRIP="${SBC_SYSROOT}/host/bin/aarch64-none-linux-gnu-strip"
+    CROSS_PKG="${SBC_SYSROOT}/host/bin/pkg-config"
+    if [ -x "$CROSS_CC" ] && [ -x "$CROSS_PKG" ]; then
+        echo "[ground-aarch64] Building from ${HUB_DIR} using ${SBC_SYSROOT} toolchain"
+        (
+            cd "$HUB_DIR"
+            PKG_CONFIG_SYSROOT_DIR="${SBC_SYSROOT}/staging" \
+            PKG_CONFIG_PATH="${SBC_SYSROOT}/staging/usr/lib/pkgconfig" \
+            PKG_CONFIG_LIBDIR="${SBC_SYSROOT}/staging/usr/lib/pkgconfig" \
+            make ground \
+                CC="${CROSS_CC} --sysroot=${SBC_SYSROOT}/staging" \
+                PKG_CONFIG="$CROSS_PKG"
+        )
+        if [ -f "${HUB_DIR}/build/ground/waybeam_hub" ]; then
+            GROUND_TMP=$(mktemp -d)
+            mkdir -p "${GROUND_TMP}/waybeam-hub-ground-aarch64"
+            cp "${HUB_DIR}/build/ground/waybeam_hub" "${GROUND_TMP}/waybeam-hub-ground-aarch64/"
+            "$CROSS_STRIP" "${GROUND_TMP}/waybeam-hub-ground-aarch64/waybeam_hub"
+            [ -f "${HUB_DIR}/configs/waybeam_ground.conf" ] && \
+                cp "${HUB_DIR}/configs/waybeam_ground.conf" "${GROUND_TMP}/waybeam-hub-ground-aarch64/"
+            [ -f "${HUB_DIR}/web/waybeam_hub_c.html" ] && \
+                cp "${HUB_DIR}/web/waybeam_hub_c.html" "${GROUND_TMP}/waybeam-hub-ground-aarch64/"
+            tar czf "${STAGING}/waybeam-hub-ground-aarch64.tar.gz" \
+                -C "$GROUND_TMP" waybeam-hub-ground-aarch64/
+            rm -rf "$GROUND_TMP"
+            echo "  -> waybeam-hub-ground-aarch64.tar.gz"
+            collected=$((collected + 1))
+            GROUND_BUILT=true
+        else
+            echo "  [WARN] aarch64 ground build failed"
+        fi
+    else
+        echo "[ground-aarch64] Cross-compiler not found in ${SBC_SYSROOT}, skipping local build"
+    fi
+fi
+
+# aarch64 ground: CI zip fallback
+if ! $GROUND_BUILT && [ -n "$GROUND_ZIP" ] && [ -f "$GROUND_ZIP" ]; then
+    echo "[ground-aarch64] Extracting from CI zip ${GROUND_ZIP}"
     GROUND_TMP=$(mktemp -d)
     unzip -q "$GROUND_ZIP" -d "$GROUND_TMP"
     if [ -f "${GROUND_TMP}/waybeam_hub" ]; then
-        cp "${GROUND_TMP}/waybeam_hub" "${STAGING}/waybeam_hub_ground"
+        mkdir -p "${GROUND_TMP}/waybeam-hub-ground-aarch64"
+        cp "${GROUND_TMP}/waybeam_hub" "${GROUND_TMP}/waybeam-hub-ground-aarch64/"
         tar czf "${STAGING}/waybeam-hub-ground-aarch64.tar.gz" \
-            -C "$GROUND_TMP" waybeam_hub
-        echo "  -> waybeam-hub-ground-aarch64.tar.gz"
+            -C "$GROUND_TMP" waybeam-hub-ground-aarch64/
+        echo "  -> waybeam-hub-ground-aarch64.tar.gz (from CI)"
         collected=$((collected + 1))
     fi
     rm -rf "$GROUND_TMP"
+elif ! $GROUND_BUILT; then
+    echo "[ground-aarch64] No toolchain or CI zip available, skipping"
+fi
+
+# x86_64 ground: native build
+if [ -n "$HUB_DIR" ] && command -v pkg-config >/dev/null 2>&1 && \
+   pkg-config --exists gstreamer-1.0 2>/dev/null; then
+    echo "[ground-x86_64] Building natively from ${HUB_DIR}"
+    (cd "$HUB_DIR" && make ground_x86)
+    if [ -f "${HUB_DIR}/build/ground_x86/waybeam_hub" ]; then
+        GROUND_TMP=$(mktemp -d)
+        mkdir -p "${GROUND_TMP}/waybeam-hub-ground-x86_64"
+        cp "${HUB_DIR}/build/ground_x86/waybeam_hub" "${GROUND_TMP}/waybeam-hub-ground-x86_64/"
+        strip "${GROUND_TMP}/waybeam-hub-ground-x86_64/waybeam_hub"
+        [ -f "${HUB_DIR}/configs/waybeam_ground.conf" ] && \
+            cp "${HUB_DIR}/configs/waybeam_ground.conf" "${GROUND_TMP}/waybeam-hub-ground-x86_64/"
+        [ -f "${HUB_DIR}/web/waybeam_hub_c.html" ] && \
+            cp "${HUB_DIR}/web/waybeam_hub_c.html" "${GROUND_TMP}/waybeam-hub-ground-x86_64/"
+        tar czf "${STAGING}/waybeam-hub-ground-x86_64.tar.gz" \
+            -C "$GROUND_TMP" waybeam-hub-ground-x86_64/
+        rm -rf "$GROUND_TMP"
+        echo "  -> waybeam-hub-ground-x86_64.tar.gz"
+        collected=$((collected + 1))
+    else
+        echo "  [WARN] x86_64 ground build failed"
+    fi
 else
-    echo "[ground] No ground build zip provided (use --ground-zip), skipping"
+    echo "[ground-x86_64] GStreamer dev packages not found, skipping"
 fi
 
 # --- Android APK ---
