@@ -22,6 +22,7 @@ waybeam-releases/
     collect.sh           # Gather binaries from local builds into staging/
     gen-manifest.sh      # Generate flashd schema-1 manifest.json from staged firmware
     upload-release.sh    # Create GitHub Release + attach assets via gh CLI
+    serve-mirror.sh      # Assemble + serve a flashd LAN firmware mirror (ground-station, on demand)
   install/
     vehicle/install.sh   # Deploy binaries to SigmaStar target via scp
     ground/install.sh    # Deploy binaries to RK3566 target via scp
