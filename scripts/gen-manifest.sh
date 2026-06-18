@@ -128,6 +128,7 @@ for filepath in "${STAGING}"/openipc.*-waybeam-*.tgz; do
     images_json="$(echo "$images_json" | jq \
         --arg id       "$image_id" \
         --arg board    "$board" \
+        --arg flash    "$flash" \
         --arg role     "vehicle" \
         --arg version  "$VERSION" \
         --arg channel  "$CHANNEL" \
@@ -138,6 +139,7 @@ for filepath in "${STAGING}"/openipc.*-waybeam-*.tgz; do
         '. + [{
             "id":      $id,
             "board":   $board,
+            "flash":   $flash,
             "role":    $role,
             "version": $version,
             "channel": $channel,
