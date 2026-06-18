@@ -1,2 +1,5 @@
 # Staging directory (local build artifacts, not committed)
 staging/
+
+# LAN mirror working directory (assembled by serve-mirror.sh, not committed)
+mirror/

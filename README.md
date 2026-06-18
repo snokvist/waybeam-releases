@@ -98,6 +98,33 @@ manifest.json                            # flashd schema-1 firmware index
 Full firmware images follow OpenIPC's naming grammar:
 `openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz` (`<wifi>` = WiFi card/driver shortcode)
 
+## Ground-station LAN mirror (flashd)
+
+Waybeam vehicles run [flashd](https://github.com/snokvist/flashd) with **no
+internet** — they fetch firmware over the LAN from a mirror hosted by the
+**ground station**, not from GitHub. `scripts/serve-mirror.sh` assembles and
+serves such a mirror **on demand** (it is not a persistent service — run it when
+you need it, Ctrl-C to stop):
+
+```bash
+# Pull the latest waybeam release + an OpenIPC nightly index, serve on :8099.
+# --host is the IP the vehicle reaches this machine at (auto-detect picks the
+# first address, so pass it explicitly on a multi-homed host).
+./scripts/serve-mirror.sh --host 192.168.1.5 --openipc
+```
+
+It downloads the release firmware into `mirror/`, rewrites the manifest's image
+URLs to point at this host (so a LAN-only vehicle can download them), prints the
+`/etc/flashd/sources.json` snippet to drop on the vehicle, and serves the
+directory over HTTP. OpenIPC nightly images are listed sha-less (flashd
+`require_sha256: false`, relying on `sysupgrade`'s own `.md5sum` check); add
+`--cache-openipc` to also download + localise them for true LAN flashing.
+
+On an air-gapped ground station (e.g. the RK3566 with no internet), assemble the
+`mirror/` on a connected machine, `rsync` it across, then
+`./scripts/serve-mirror.sh --no-assemble --host <gs-ip>` to just serve it. (The
+long-term home for this is the flashd **Mode B** orchestrator in `waybeam-hub`.)
+
 ## Quick install
 
 ### Vehicle (SigmaStar)
