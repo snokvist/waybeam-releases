@@ -18,9 +18,10 @@
 #   --clean                  Remove staging/ before collecting
 #
 # Firmware tarball naming follows OpenIPC grammar:
-#   openipc.<board>-<nor|nand>-waybeam-<region>.tgz
+#   openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz
 # e.g. openipc.ssc338q-nor-waybeam-eu.tgz
-# The board is field 1 of --device; region is field 3 of --device.
+# The board is field 1 of --device; <wifi> (the WiFi card/driver shortcode —
+# eu=rtl88x2eu, cu=rtl88x2cu, … — NOT a geographic region) is field 3.
 
 set -euo pipefail
 
@@ -112,7 +113,7 @@ if [ -d "${BUILDER_DIR}/archive/${DEVICE}" ]; then
     LATEST=$(ls -1d "${BUILDER_DIR}/archive/${DEVICE}"/*/ 2>/dev/null | sort | tail -1)
     if [ -n "$LATEST" ]; then
         BOARD=$(echo "$DEVICE" | cut -d_ -f1)
-        REGION=$(echo "$DEVICE" | rev | cut -d_ -f1 | rev)
+        WIFI=$(echo "$DEVICE" | rev | cut -d_ -f1 | rev)   # WiFi card/driver shortcode (eu=rtl88x2eu, …)
         echo "[firmware] Collecting from ${LATEST}"
         for f in "${LATEST}"/*; do
             [ -f "$f" ] || continue
@@ -120,8 +121,8 @@ if [ -d "${BUILDER_DIR}/archive/${DEVICE}" ]; then
             collected=$((collected + 1))
         done
         # Create a tarball of the firmware using OpenIPC naming grammar:
-        # openipc.<board>-<nor|nand>-waybeam-<region>.tgz
-        FIRMWARE_TGZ="openipc.${BOARD}-${FLASH_TYPE}-waybeam-${REGION}.tgz"
+        # openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz
+        FIRMWARE_TGZ="openipc.${BOARD}-${FLASH_TYPE}-waybeam-${WIFI}.tgz"
         (cd "$LATEST" && tar czf "${STAGING}/${FIRMWARE_TGZ}" .)
         echo "  -> ${FIRMWARE_TGZ}"
     fi
