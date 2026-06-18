@@ -60,6 +60,17 @@ fi
 
 echo "=== Creating release ${VERSION} ==="
 echo ""
+
+# Generate flashd manifest.json before assembling the asset list.
+# --tag  : the release tag (used to build asset download URLs)
+# --version defaults to today's date (YYYY.MM.DD firmware version)
+echo "Generating flashd manifest..."
+"${SCRIPT_DIR}/gen-manifest.sh" --staging "$STAGING" --tag "$VERSION" || {
+    echo "Error: gen-manifest.sh failed — aborting release to avoid publishing without a manifest." >&2
+    exit 1
+}
+echo ""
+
 echo "Files to upload:"
 ls -lh "$STAGING/"
 echo ""

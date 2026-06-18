@@ -38,18 +38,35 @@ Download the latest release from the
 ### Full firmware images (from OpenIPC builder)
 
 Complete rootfs + kernel images for supported SoCs and WiFi regions.
+Tarballs follow OpenIPC's naming grammar: `openipc.<board>-<nor|nand>-waybeam-<region>.tgz`.
 
-| SoC | Variants | Contents |
+| SoC | Variants | Tarball example |
 |---|---|---|
-| SSC338Q | au, bu, cu, eu | `rootfs.squashfs`, `uImage`, firmware tarball |
-| SSC30KQ | au, bu, cu, eu | `rootfs.squashfs`, `uImage`, firmware tarball |
-| SSC378QE | au, bu, cu, eu | `rootfs.squashfs`, `uImage`, firmware tarball |
+| SSC338Q | au, bu, cu, eu | `openipc.ssc338q-nor-waybeam-eu.tgz` |
+| SSC30KQ | au, bu, cu, eu | `openipc.ssc30kq-nor-waybeam-eu.tgz` |
+| SSC378QE | au, bu, cu, eu | `openipc.ssc378qe-nor-waybeam-eu.tgz` |
 
 WiFi region variants:
 - **au** — Australia / New Zealand
 - **bu** — Brazil
 - **cu** — China
 - **eu** — Europe (default for most users)
+
+### flashd manifest
+
+Every release includes `manifest.json` — a [flashd](https://github.com/snokvist/flashd)
+schema-1 firmware index describing the flashable camera firmware images in this release.
+
+`flashd` on a Waybeam vehicle reads `manifest.json` automatically when configured with
+a `github` source pointing at this repository:
+
+```json
+{ "sources": [ { "type": "github", "repo": "snokvist/waybeam-releases", "channel": "stable" } ] }
+```
+
+The `version` field inside the manifest uses a date-based scheme (`YYYY.MM.DD`, optionally
+`.N` for same-day rebuilds) so `flashd` can correctly determine whether an image is newer
+than the device's running firmware.
 
 ### Configs and support files
 
@@ -67,14 +84,18 @@ Releases are tagged as `vX.Y.Z` (e.g. `v0.5.0`).
 
 Asset naming convention:
 ```
-waybeam-hub-vehicle-arm.tar.gz        # Vehicle hub + config + web + init
-waybeam-hub-ground-aarch64.tar.gz     # Ground hub (integrated pixelpilot)
-venc-star6e-arm.tar.gz                # Video encoder (star6e)
-venc-maruko-arm.tar.gz                # Video encoder (maruko)
-waybeam-android-vX.Y.Z.apk           # Android app
-waybeam-connect-esp32c3.bin           # ESP32 firmware
-firmware-ssc338q-eu.tgz              # Full firmware image
+waybeam-hub-vehicle-arm.tar.gz           # Vehicle hub + config + web + init
+waybeam-hub-ground-aarch64.tar.gz        # Ground hub (integrated pixelpilot)
+venc-star6e-arm.tar.gz                   # Video encoder (star6e)
+venc-maruko-arm.tar.gz                   # Video encoder (maruko)
+waybeam-android-vX.Y.Z.apk              # Android app
+waybeam-connect-esp32c3.bin              # ESP32 firmware
+openipc.ssc338q-nor-waybeam-eu.tgz      # Full firmware image (SSC338Q, NOR, EU region)
+manifest.json                            # flashd schema-1 firmware index
 ```
+
+Full firmware images follow OpenIPC's naming grammar:
+`openipc.<board>-<nor|nand>-waybeam-<region>.tgz`
 
 ## Quick install
 

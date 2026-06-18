@@ -10,11 +10,17 @@
 #   --android-dir DIR        Path to Waybeam-android (default: auto-detect)
 #   --esp32-dir DIR          Path to esp32-supermini-projects (default: auto-detect)
 #   --device DEVICE          Builder device name (default: ssc338q_waybeam_eu)
+#   --flash nor|nand         Flash memory type for firmware tarball naming (default: nor)
 #   --version VERSION        Version string for naming (default: dev)
 #   --ground-zip FILE        Path to ground build zip (from CI, fallback)
 #   --hub-dir DIR            Path to waybeam-hub (default: auto-detect)
 #   --sbc-dir DIR            Path to sbc-groundstations (default: auto-detect)
 #   --clean                  Remove staging/ before collecting
+#
+# Firmware tarball naming follows OpenIPC grammar:
+#   openipc.<board>-<nor|nand>-waybeam-<region>.tgz
+# e.g. openipc.ssc338q-nor-waybeam-eu.tgz
+# The board is field 1 of --device; region is field 3 of --device.
 
 set -euo pipefail
 
@@ -30,6 +36,7 @@ ESP32_DIR=""
 HUB_DIR=""
 SBC_DIR=""
 DEVICE="ssc338q_waybeam_eu"
+FLASH_TYPE="nor"
 VERSION="dev"
 GROUND_ZIP=""
 CLEAN=false
@@ -43,6 +50,7 @@ while [[ $# -gt 0 ]]; do
         --hub-dir)        HUB_DIR="$2"; shift 2 ;;
         --sbc-dir)        SBC_DIR="$2"; shift 2 ;;
         --device)         DEVICE="$2"; shift 2 ;;
+        --flash)          FLASH_TYPE="$2"; shift 2 ;;
         --version)        VERSION="$2"; shift 2 ;;
         --ground-zip)     GROUND_ZIP="$2"; shift 2 ;;
         --clean)          CLEAN=true; shift ;;
@@ -103,16 +111,17 @@ if [ -d "${BUILDER_DIR}/archive/${DEVICE}" ]; then
     # Find latest build by timestamp directory name
     LATEST=$(ls -1d "${BUILDER_DIR}/archive/${DEVICE}"/*/ 2>/dev/null | sort | tail -1)
     if [ -n "$LATEST" ]; then
-        SOC=$(echo "$DEVICE" | cut -d_ -f1)
-        VARIANT=$(echo "$DEVICE" | rev | cut -d_ -f1 | rev)
+        BOARD=$(echo "$DEVICE" | cut -d_ -f1)
+        REGION=$(echo "$DEVICE" | rev | cut -d_ -f1 | rev)
         echo "[firmware] Collecting from ${LATEST}"
         for f in "${LATEST}"/*; do
             [ -f "$f" ] || continue
             cp "$f" "$STAGING/"
             collected=$((collected + 1))
         done
-        # Create a tarball of the firmware
-        FIRMWARE_TGZ="firmware-${SOC}-${VARIANT}.tgz"
+        # Create a tarball of the firmware using OpenIPC naming grammar:
+        # openipc.<board>-<nor|nand>-waybeam-<region>.tgz
+        FIRMWARE_TGZ="openipc.${BOARD}-${FLASH_TYPE}-waybeam-${REGION}.tgz"
         (cd "$LATEST" && tar czf "${STAGING}/${FIRMWARE_TGZ}" .)
         echo "  -> ${FIRMWARE_TGZ}"
     fi
