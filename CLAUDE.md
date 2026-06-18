@@ -20,6 +20,7 @@ waybeam-releases/
   CLAUDE.md              # This file: agentic workflow
   scripts/
     collect.sh           # Gather binaries from local builds into staging/
+    gen-manifest.sh      # Generate flashd schema-1 manifest.json from staged firmware
     upload-release.sh    # Create GitHub Release + attach assets via gh CLI
   install/
     vehicle/install.sh   # Deploy binaries to SigmaStar target via scp
@@ -49,14 +50,34 @@ Sources:
 The collect script stages everything into `staging/` with the correct
 naming convention, ready for upload.
 
+Firmware tarballs use OpenIPC's naming grammar:
+`openipc.<board>-<nor|nand>-waybeam-<region>.tgz`
+(e.g. `openipc.ssc338q-nor-waybeam-eu.tgz`). The `--flash nor|nand` option
+controls the flash type (default: `nor`).
+
+### 1a. Generate flashd manifest (automatic via upload-release.sh)
+
+`upload-release.sh` invokes `gen-manifest.sh` automatically before publishing.
+To run it standalone (e.g. to inspect the manifest before uploading):
+
+```bash
+./scripts/gen-manifest.sh --staging staging/ --tag v0.7.0
+```
+
+This scans `staging/` for `openipc.*-waybeam-*.tgz` images and writes a
+flashd schema-1 `manifest.json` into `staging/`. The `version` field defaults
+to today's date (`YYYY.MM.DD`). If no matching firmware images are found, the
+script exits non-zero and the release is aborted.
+
 ### 2. Upload release
 
 ```bash
 ./scripts/upload-release.sh v0.5.0 [--notes "Release notes here"]
 ```
 
-This creates a GitHub Release tagged `vX.Y.Z` and attaches all files
-from `staging/`.
+This generates `manifest.json` into staging, then creates a GitHub Release
+tagged `vX.Y.Z` and attaches all files from `staging/` (including the manifest).
+The upload is aborted if manifest generation fails.
 
 ### 3. Deploy to devices
 
@@ -211,11 +232,15 @@ venc-maruko-arm.tar.gz
 waybeam-pwm-arm
 waybeam-android-vX.Y.Z.apk
 waybeam-connect-esp32c3.bin
-firmware-ssc338q-eu.tgz
-firmware-ssc338q-au.tgz
-firmware-ssc30kq-eu.tgz
+openipc.ssc338q-nor-waybeam-eu.tgz
+openipc.ssc338q-nor-waybeam-au.tgz
+openipc.ssc30kq-nor-waybeam-eu.tgz
 ...
 ```
+
+Full firmware images follow OpenIPC's grammar
+`openipc.<board>-<nor|nand>-waybeam-<region>.tgz` so the manifest generator
+parses them with the same code path as the upstream OpenIPC nightly assets.
 
 Tarballs (`.tar.gz`) are used when a binary ships with config files,
 init scripts, or web assets. Standalone binaries are uploaded as-is.
