@@ -14,7 +14,8 @@
 #   --out FILE       Output file path (default: <staging>/manifest.json)
 #
 # Scans staging for files matching the pattern:
-#   openipc.<board>-<nor|nand>-waybeam-<region>.tgz
+#   openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz
+#   (<wifi> = WiFi card/driver shortcode: eu=rtl88x2eu, cu=rtl88x2cu, … — not a region)
 # and emits a flashd schema-1 manifest.json.
 #
 # Only full firmware images (openipc.*-waybeam-*.tgz) go into the manifest.
@@ -84,22 +85,24 @@ for filepath in "${STAGING}"/openipc.*-waybeam-*.tgz; do
 
     filename="$(basename "$filepath")"
 
-    # Parse: openipc.<board>-<flash>-waybeam-<region>.tgz
+    # Parse: openipc.<board>-<flash>-waybeam-<wifi>.tgz
+    # <wifi> is the WiFi card/driver shortcode (eu=rtl88x2eu, cu=rtl88x2cu, …),
+    # NOT a geographic region.
     # Strip leading "openipc." and trailing ".tgz"
     inner="${filename#openipc.}"
     inner="${inner%.tgz}"
 
-    # inner = <board>-<flash>-waybeam-<region>
-    # Split on "-waybeam-" to isolate region
+    # inner = <board>-<flash>-waybeam-<wifi>
+    # Split on "-waybeam-" to isolate the wifi shortcode
     board_flash="${inner%-waybeam-*}"
-    region="${inner##*-waybeam-}"
+    wifi="${inner##*-waybeam-}"
 
     # Split board_flash on first "-" to get board and flash type
     board="${board_flash%%-*}"
     flash="${board_flash#*-}"
 
     # Validate parsed fields
-    if [ -z "$board" ] || [ -z "$flash" ] || [ -z "$region" ]; then
+    if [ -z "$board" ] || [ -z "$flash" ] || [ -z "$wifi" ]; then
         echo "[gen-manifest] WARN: could not parse filename ${filename}, skipping" >&2
         continue
     fi
@@ -117,10 +120,10 @@ for filepath in "${STAGING}"/openipc.*-waybeam-*.tgz; do
     # Build download URL
     url="https://github.com/${REPO_SLUG}/releases/download/${TAG}/${filename}"
 
-    # Build image id: <board>-waybeam-<region>-<version>
-    image_id="${board}-waybeam-${region}-${VERSION}"
+    # Build image id: <board>-waybeam-<wifi>-<version>
+    image_id="${board}-waybeam-${wifi}-${VERSION}"
 
-    notes="region: ${region}; flash: ${flash}"
+    notes="wifi: ${wifi}; flash: ${flash}"
 
     echo "[gen-manifest]   + ${image_id} (${filename}, ${size} bytes)" >&2
 

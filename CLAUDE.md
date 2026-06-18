@@ -51,9 +51,10 @@ The collect script stages everything into `staging/` with the correct
 naming convention, ready for upload.
 
 Firmware tarballs use OpenIPC's naming grammar:
-`openipc.<board>-<nor|nand>-waybeam-<region>.tgz`
-(e.g. `openipc.ssc338q-nor-waybeam-eu.tgz`). The `--flash nor|nand` option
-controls the flash type (default: `nor`).
+`openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz`
+(e.g. `openipc.ssc338q-nor-waybeam-eu.tgz`). The `<wifi>` field is the WiFi
+card/driver shortcode (eu=rtl88x2eu, cu=rtl88x2cu, …), **not** a region. The
+`--flash nor|nand` option controls the flash type (default: `nor`).
 
 ### 1a. Generate flashd manifest (automatic via upload-release.sh)
 
@@ -239,8 +240,9 @@ openipc.ssc30kq-nor-waybeam-eu.tgz
 ```
 
 Full firmware images follow OpenIPC's grammar
-`openipc.<board>-<nor|nand>-waybeam-<region>.tgz` so the manifest generator
-parses them with the same code path as the upstream OpenIPC nightly assets.
+`openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz` (`<wifi>` = WiFi card/driver
+shortcode, not a region) so the manifest generator parses them with the same
+code path as the upstream OpenIPC nightly assets.
 
 Tarballs (`.tar.gz`) are used when a binary ships with config files,
 init scripts, or web assets. Standalone binaries are uploaded as-is.
@@ -266,14 +268,15 @@ The release workflow is:
 
 Note: Vehicle requires `scp -O` (legacy protocol) due to BusyBox dropbear.
 
-## WiFi region variants
+## WiFi card variants
 
-The builder produces firmware for multiple WiFi regulatory domains.
-Each variant includes the appropriate WiFi driver and regulatory config:
+The builder produces firmware for different **WiFi cards / Realtek drivers**.
+The shortcode in the filename selects which driver is baked in (it is the
+card/driver, not a geographic region):
 
-- `au` — Australia / New Zealand
-- `bu` — Brazil
-- `cu` — China
-- `eu` — Europe (most common)
+- `eu` — rtl88x2eu (RTL8812EU / RTL8822EU)
+- `cu` — rtl88x2cu (RTL8812CU / RTL8822CU)
+- `au` — rtl8812au family
+- `bu` — rtl8812bu family
 
 The variant only affects the full firmware image, not individual binaries.

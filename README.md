@@ -37,20 +37,21 @@ Download the latest release from the
 
 ### Full firmware images (from OpenIPC builder)
 
-Complete rootfs + kernel images for supported SoCs and WiFi regions.
-Tarballs follow OpenIPC's naming grammar: `openipc.<board>-<nor|nand>-waybeam-<region>.tgz`.
+Complete rootfs + kernel images for supported SoCs and WiFi cards.
+Tarballs follow OpenIPC's naming grammar: `openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz`.
 
-| SoC | Variants | Tarball example |
+| SoC | WiFi variants | Tarball example |
 |---|---|---|
 | SSC338Q | au, bu, cu, eu | `openipc.ssc338q-nor-waybeam-eu.tgz` |
 | SSC30KQ | au, bu, cu, eu | `openipc.ssc30kq-nor-waybeam-eu.tgz` |
 | SSC378QE | au, bu, cu, eu | `openipc.ssc378qe-nor-waybeam-eu.tgz` |
 
-WiFi region variants:
-- **au** — Australia / New Zealand
-- **bu** — Brazil
-- **cu** — China
-- **eu** — Europe (default for most users)
+The `<wifi>` field is the **WiFi card / driver** baked into the image (it
+selects the Realtek driver), **not** a geographic region:
+- **eu** — rtl88x2eu (RTL8812EU / RTL8822EU)
+- **cu** — rtl88x2cu (RTL8812CU / RTL8822CU)
+- **au** — rtl8812au family
+- **bu** — rtl8812bu family
 
 ### flashd manifest
 
@@ -90,12 +91,12 @@ venc-star6e-arm.tar.gz                   # Video encoder (star6e)
 venc-maruko-arm.tar.gz                   # Video encoder (maruko)
 waybeam-android-vX.Y.Z.apk              # Android app
 waybeam-connect-esp32c3.bin              # ESP32 firmware
-openipc.ssc338q-nor-waybeam-eu.tgz      # Full firmware image (SSC338Q, NOR, EU region)
+openipc.ssc338q-nor-waybeam-eu.tgz      # Full firmware (SSC338Q, NOR, rtl88x2eu WiFi)
 manifest.json                            # flashd schema-1 firmware index
 ```
 
 Full firmware images follow OpenIPC's naming grammar:
-`openipc.<board>-<nor|nand>-waybeam-<region>.tgz`
+`openipc.<board>-<nor|nand>-waybeam-<wifi>.tgz` (`<wifi>` = WiFi card/driver shortcode)
 
 ## Quick install
 
