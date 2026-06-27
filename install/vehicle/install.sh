@@ -4,7 +4,7 @@
 #
 # Usage: ./install/vehicle/install.sh [staging-dir] [vehicle-ip]
 #
-# Deploys: waybeam_hub, json_cli, venc, waybeam-pwm, configs, init scripts
+# Deploys: waybeam_hub, json_cli, waybeam (venc), waybeam-pwm, configs, init scripts
 # Target: SigmaStar SSC30KQ / SSC338Q (BusyBox dropbear, requires scp -O)
 
 set -euo pipefail
@@ -40,12 +40,12 @@ deploy() {
 echo "[binaries]"
 deploy "${STAGING}/waybeam_hub"   "/usr/bin/waybeam_hub"
 deploy "${STAGING}/json_cli"     "/usr/bin/json_cli"
-deploy "${STAGING}/venc-star6e"  "/usr/bin/venc"
+deploy "${STAGING}/waybeam"      "/usr/bin/waybeam"
 deploy "${STAGING}/waybeam-pwm"  "/usr/bin/waybeam-pwm"
 
 # Config (don't overwrite existing by default)
 echo "[configs]"
-for conf in waybeam_vehicle.conf venc.json; do
+for conf in waybeam_vehicle.conf waybeam.json; do
     if [ -f "${STAGING}/${conf}" ]; then
         # Check if config already exists on target
         if ssh "${SSH_USER}@${VEHICLE_IP}" "test -f /etc/${conf}" 2>/dev/null; then
@@ -63,7 +63,7 @@ deploy "${STAGING}/waybeam_vehicle.html" "/var/www/waybeam_vehicle.html" "0644"
 # Init scripts
 echo "[init]"
 deploy "${STAGING}/S97waybeam-hub" "/etc/init.d/S97waybeam-hub"
-deploy "${STAGING}/S95venc"        "/etc/init.d/S95venc"
+deploy "${STAGING}/S95waybeam"     "/etc/init.d/S95waybeam"
 
 # Sensor profiles
 echo "[sensors]"
@@ -77,5 +77,5 @@ echo ""
 echo "=== Deploy complete ==="
 echo ""
 echo "Restart services:"
-echo "  ssh ${SSH_USER}@${VEHICLE_IP} '/etc/init.d/S95venc restart'"
+echo "  ssh ${SSH_USER}@${VEHICLE_IP} '/etc/init.d/S95waybeam restart'"
 echo "  ssh ${SSH_USER}@${VEHICLE_IP} '/etc/init.d/S97waybeam-hub restart'"
