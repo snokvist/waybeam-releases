@@ -144,10 +144,17 @@ if [ -d "$BR_TARGET" ]; then
         fi
     done
 
-    # venc
-    if [ -f "${BR_TARGET}/usr/bin/venc" ]; then
-        cp "${BR_TARGET}/usr/bin/venc" "${STAGING}/venc-star6e"
-        echo "  -> venc-star6e"
+    # venc (binary renamed venc -> waybeam upstream; asset grammar keeps venc-star6e)
+    if [ -f "${BR_TARGET}/usr/bin/waybeam" ]; then
+        cp "${BR_TARGET}/usr/bin/waybeam" "${STAGING}/waybeam"
+        echo "  -> waybeam (venc)"
+        collected=$((collected + 1))
+    fi
+
+    # flashd (Mode A firmware flasher)
+    if [ -f "${BR_TARGET}/usr/bin/flashd" ]; then
+        cp "${BR_TARGET}/usr/bin/flashd" "${STAGING}/flashd"
+        echo "  -> flashd"
         collected=$((collected + 1))
     fi
 
@@ -160,7 +167,7 @@ if [ -d "$BR_TARGET" ]; then
 
     # Config files
     for f in "${BR_TARGET}/etc/waybeam_hub/waybeam_vehicle.conf" \
-             "${BR_TARGET}/etc/venc.json"; do
+             "${BR_TARGET}/etc/waybeam.json"; do
         if [ -f "$f" ]; then
             cp "$f" "${STAGING}/$(basename "$f")"
             echo "  -> $(basename "$f")"
@@ -170,7 +177,7 @@ if [ -d "$BR_TARGET" ]; then
 
     # Init scripts
     for f in "${BR_TARGET}/etc/init.d/S97waybeam-hub" \
-             "${BR_TARGET}/etc/init.d/S95venc"; do
+             "${BR_TARGET}/etc/init.d/S95waybeam"; do
         if [ -f "$f" ]; then
             cp "$f" "${STAGING}/$(basename "$f")"
             echo "  -> $(basename "$f")"
@@ -197,7 +204,7 @@ if [ -d "$BR_TARGET" ]; then
     # Create vehicle bundle tarball
     echo "[vehicle] Creating waybeam-hub-vehicle-arm.tar.gz"
     VEHICLE_FILES=""
-    for f in waybeam_hub json_cli waybeam_vehicle.conf venc.json \
+    for f in waybeam_hub json_cli waybeam_vehicle.conf waybeam.json \
              waybeam_vehicle.html S97waybeam-hub; do
         [ -f "${STAGING}/${f}" ] && VEHICLE_FILES="${VEHICLE_FILES} ${f}"
     done
